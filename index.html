@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Statistical Independence &mdash; Contingency Tables &amp; Chi-Square Analysis</title>
+  <meta name="description" content="Programmatic bivariate contingency table construction, marginal and conditional frequency distributions, expected frequencies under independence, Pearson Chi-square statistic, exact regularized incomplete gamma p-value, and association vs. causality analysis.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="top-nav">
+      <div><strong>Statistics Homeworks</strong> &mdash; DavideLights</div>
+      <div class="nav-links">
+        <a href="../index.html">Hub</a>
+        <a href="../hm2/index.html">HM2: Welford</a>
+        <a href="../hm3/index.html">HM3: Sampling Mean</a>
+        <a href="../hm4/index.html">HM4: LLN &amp; CLT</a>
+        <a href="../hm5/index.html">HM5: Integrals &amp; Normal CDF</a>
+        <a href="../hm6/index.html" class="active">HM6: Statistical Independence</a>
+      </div>
+    </nav>
+
+    <header>
+      <h1>Statistical Independence &mdash; Contingency Tables &amp; &chi;&sup2; Test</h1>
+      <p>Programmatic Bivariate Cross-Tabulation (X, Y), Joint / Marginal / Conditional Distributions, Expected Frequencies E<sub>ij</sub>, Pearson's &chi;&sup2; &amp; p-Value, and Association vs. Causality</p>
+    </header>
+
+    <!-- =====================================================================
+         SECTION 1: THEORETICAL FOUNDATIONS OF INDEPENDENCE
+         ===================================================================== -->
+
+    <section class="panel prose">
+      <div class="panel-title">
+        <span>Section 1 &mdash; Theoretical Concepts of Independence in Probability &amp; Statistics</span>
+        <span class="panel-subtitle">Measure-Theoretic Events vs. Bivariate Empirical Contingency Tables</span>
+      </div>
+
+      <p>
+        <strong>1. Probabilistic Independence of Events &amp; Random Variables:</strong>
+        On a probability space (&Omega;, &#8497;, &Popf;), two events <em>A</em>, <em>B</em> &isin; &#8497; are <em>statistically independent</em> (written <em>A</em> &perp;&perp; <em>B</em>) if and only if their joint probability factorizes into the product of their marginal probabilities:
+      </p>
+      <div class="formula-box">&Popf;(A &cap; B) = &Popf;(A) &middot; &Popf;(B)   &hArr;   &Popf;(A | B) = &Popf;(A)   (for &Popf;(B) &gt; 0)   &hArr;   &Popf;(B | A) = &Popf;(B)   (for &Popf;(A) &gt; 0)</div>
+
+      <p>
+        For two discrete categorical random variables <em>X</em> &isin; {<em>x</em><sub>1</sub>, &hellip;, <em>x<sub>R</sub></em>} and <em>Y</em> &isin; {<em>y</em><sub>1</sub>, &hellip;, <em>y<sub>C</sub></em>} (denoted (<em>X</em>, <em>Y</em>) or (<em>X</em>, <em>F</em>) in bivariate feature notation), let <em>p<sub>ij</sub></em> = &Popf;(<em>X</em> = <em>x<sub>i</sub></em>, <em>Y</em> = <em>y<sub>j</sub></em>) be the joint probability mass function, with row marginals <em>p</em><sub><em>i</em>&bull;</sub> = &Sigma;<sub><em>j</em>=1..<em>C</em></sub> <em>p<sub>ij</sub></em> and column marginals <em>p</em><sub>&bull;<em>j</em></sub> = &Sigma;<sub><em>i</em>=1..<em>R</em></sub> <em>p<sub>ij</sub></em>. Then <em>X</em> and <em>Y</em> are independent (<em>X</em> &perp;&perp; <em>Y</em>) if and only if:
+      </p>
+      <div class="formula-box">p_{ij} = p_{i&bull;} &middot; p_{&bull;j}     for all i &isin; {1, &hellip;, R},  j &isin; {1, &hellip;, C}</div>
+
+      <p>
+        Equivalently, every conditional distribution of <em>Y</em> given <em>X</em> = <em>x<sub>i</sub></em> is invariant across rows and identical to the marginal distribution of <em>Y</em>:
+      </p>
+      <div class="formula-box">p_{Y|X}(y_j | x_i) = p_{ij} / p_{i&bull;} = p_{&bull;j}     and     p_{X|Y}(x_i | y_j) = p_{ij} / p_{&bull;j} = p_{i&bull;}</div>
+
+      <p>
+        <strong>2. Empirical Contingency Table &amp; Expected Frequencies under H<sub>0</sub>:</strong>
+        Given a sample {(<em>X<sub>k</sub></em>, <em>Y<sub>k</sub></em>)}<sub><em>k</em>=1..<em>N</em></sub> of size <em>N</em>, let <em>O<sub>ij</sub></em> = <em>n<sub>ij</sub></em> be the observed count in cell (<em>i</em>, <em>j</em>), with row marginal totals <em>n</em><sub><em>i</em>&bull;</sub> = &Sigma;<sub><em>j</em></sub> <em>n<sub>ij</sub></em>, column marginal totals <em>n</em><sub>&bull;<em>j</em></sub> = &Sigma;<sub><em>i</em></sub> <em>n<sub>ij</sub></em>, and grand total <em>N</em> = &Sigma;<sub><em>i</em>,<em>j</em></sub> <em>n<sub>ij</sub></em>. Under the null hypothesis of statistical independence <em>H</em><sub>0</sub> : <em>p<sub>ij</sub></em> = <em>p</em><sub><em>i</em>&bull;</sub><em>p</em><sub>&bull;<em>j</em></sub>, replacing unknown marginals with their maximum likelihood estimators <em>p&#770;</em><sub><em>i</em>&bull;</sub> = <em>n</em><sub><em>i</em>&bull;</sub> / <em>N</em> and <em>p&#770;</em><sub>&bull;<em>j</em></sub> = <em>n</em><sub>&bull;<em>j</em></sub> / <em>N</em> yields the <strong>expected frequency</strong> in cell (<em>i</em>, <em>j</em>):
+      </p>
+      <div class="formula-box">E_{ij} = N &middot; p&#770;_{i&bull;} &middot; p&#770;_{&bull;j} = (n_{i&bull;} &middot; n_{&bull;j}) / N</div>
+
+      <p>
+        <strong>3. Pearson's Chi-Square Statistic, Degrees of Freedom &amp; p-Value:</strong>
+        To quantify the global discrepancy between observed counts <em>O<sub>ij</sub></em> and independence expectations <em>E<sub>ij</sub></em>, Karl Pearson (1900) introduced the test statistic:
+      </p>
+      <div class="formula-box">&chi;&sup2; = &Sigma;_{i=1..R} &Sigma;_{j=1..C} (O_{ij} &minus; E_{ij})&sup2; / E_{ij} = &Sigma;_{i,j} r_{ij}&sup2;,      where r_{ij} = (O_{ij} &minus; E_{ij}) / &radic;E_{ij}  ( standardized Pearson residual )</div>
+      <p>
+        By Cochran's theorem and the multivariate Central Limit Theorem, under <em>H</em><sub>0</sub> (as <em>N</em> &rarr; &infin;, with Cochran's rule of thumb requiring <em>E<sub>ij</sub></em> &ge; 5 in at least 80% of cells and all <em>E<sub>ij</sub></em> &ge; 1), the statistic &chi;&sup2; converges in distribution to a Chi-square distribution with <strong><em>df</em> = (<em>R</em> &minus; 1)(<em>C</em> &minus; 1)</strong> degrees of freedom (since estimating <em>R</em> + <em>C</em> marginals subject to &Sigma;<sub><em>i</em></sub> <em>p&#770;</em><sub><em>i</em>&bull;</sub> = 1 and &Sigma;<sub><em>j</em></sub> <em>p&#770;</em><sub>&bull;<em>j</em></sub> = 1 leaves (<em>R</em><em>C</em> &minus; 1) &minus; (<em>R</em> &minus; 1) &minus; (<em>C</em> &minus; 1) = (<em>R</em> &minus; 1)(<em>C</em> &minus; 1) free parameters). The asymptotic upper-tail <strong><em>p</em>-value</strong> and normalized effect sizes (<strong>Cram&eacute;r's <em>V</em></strong> and <strong>Contingency Coefficient <em>C</em></strong>) are:
+      </p>
+      <div class="formula-box">p-value = &Popf;(&chi;&sup2;_{df} &ge; &chi;&sup2;_{obs}) = 1 &minus; P(df/2, &chi;&sup2;_{obs}/2) = Q(df/2, &chi;&sup2;_{obs}/2)
+Cram&eacute;r's V = &radic;( &chi;&sup2; / (N &middot; min(R &minus; 1, C &minus; 1)) ) &isin; [0, 1],      Pearson's C = &radic;( &chi;&sup2; / (&chi;&sup2; + N) )</div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 2: INTERACTIVE BIVARIATE DATASET & CONTINGENCY ENGINE
+         ===================================================================== -->
+
+    <section class="panel">
+      <div class="panel-title">
+        <span>Section 2 &mdash; Interactive Bivariate Dataset &amp; Programmatic Contingency Engine</span>
+        <span class="panel-subtitle">Construct Contingency Table from Raw Pairs (X, Y) or Preset Scenarios</span>
+      </div>
+
+      <div class="controls-grid">
+        <div class="control-group" style="grid-column: span 2;">
+          <label for="presetSelect">Bivariate Dataset Scenario (<em>X</em>, <em>Y</em>):</label>
+          <select id="presetSelect">
+            <option value="mfa_breach" selected>1. [Cybersecurity — Dependent] MFA Policy (X) vs. Intrusion Outcome (Y) (N = 500)</option>
+            <option value="os_severity">2. [Cybersecurity — Independent] Server OS Family (X) vs. Alert Severity (Y) (N = 400)</option>
+            <option value="icecream_drowning">3. [Confounding — Spurious Association] Ice Cream Sales Tier (X) vs. Drowning Incidents (Y) (N = 600)</option>
+            <option value="training_phishing">4. [Experimental RCT — Causal &amp; Dependent] Security Training (X) vs. Phishing Click (Y) (N = 450)</option>
+            <option value="synth_indep">5. [Monte Carlo — H₀ True] Synthetic Independent Sample: p_{ij} = p_{i•} p_{•j} (N = 500)</option>
+            <option value="synth_dep">6. [Monte Carlo — H₁ True] Synthetic Coupled Sample with Diagonal Association (N = 500)</option>
+            <option value="custom_raw">7. [Custom Raw Stream] Parse User-Edited Raw (X, Y) Dataset Below</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="alphaSelect">Significance Level (&alpha;):</label>
+          <select id="alphaSelect">
+            <option value="0.10">&alpha; = 0.10 (90% confidence)</option>
+            <option value="0.05" selected>&alpha; = 0.05 (95% confidence)</option>
+            <option value="0.01">&alpha; = 0.01 (99% confidence)</option>
+            <option value="0.001">&alpha; = 0.001 (99.9% confidence)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="tableViewSelect">Contingency Table Cell Display:</label>
+          <select id="tableViewSelect">
+            <option value="comprehensive" selected>All Metrics (O_ij, E_ij, Joint %, Row %, Col %, Residual)</option>
+            <option value="counts_expected">Observed Count O_ij &amp; Expected E_ij Only</option>
+            <option value="joint_rel">Joint Relative Frequencies f_ij = O_ij / N</option>
+            <option value="cond_row">Row Conditional Frequencies P(Y = y_j | X = x_i)</option>
+            <option value="cond_col">Column Conditional Frequencies P(X = x_i | Y = y_j)</option>
+            <option value="chi_contrib">Cell Chi-Square Contributions (O_ij &minus; E_ij)&sup2; / E_ij</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 16px;">
+        <div class="control-group">
+          <label for="rawDatasetInput">
+            Raw Bivariate Dataset Stream <code>(X, Y)</code> &mdash; Accepts <code>X, Y</code> pairs (one per line) or weighted <code>X, Y, count</code> tuples (editable):
+          </label>
+          <textarea id="rawDatasetInput" rows="5" style="width: 100%; font-family: var(--font-mono); font-size: 12px; padding: 8px; border: 1px solid var(--border); background: var(--bg-alt); color: var(--fg); resize: vertical;"></textarea>
+        </div>
+      </div>
+
+      <div class="btn-row" style="margin-bottom: 18px;">
+        <button id="btnCompute" class="primary">Construct Contingency Table &amp; Run &chi;&sup2; Test</button>
+        <button id="btnResampleIndep">Simulate New Sample Under H₀ (Independent)</button>
+        <button id="btnResampleDep">Simulate New Sample Under H₁ (Dependent)</button>
+      </div>
+
+      <!-- Summary Stat Cards -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Sample Size (N) &amp; Dimensions</div>
+          <div class="stat-val" id="statNDim">&mdash;</div>
+          <div class="stat-sub" id="statDfSub">df = (R &minus; 1)(C &minus; 1)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pearson &chi;&sup2; Statistic</div>
+          <div class="stat-val" id="statChi2">&mdash;</div>
+          <div class="stat-sub" id="statCritSub">Critical &chi;&sup2;_{1&minus;&alpha;, df} = &mdash;</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Exact Asymptotic p-Value</div>
+          <div class="stat-val" id="statPValue">&mdash;</div>
+          <div class="stat-sub" id="statG2Sub">Likelihood Ratio G&sup2; = &mdash;</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Effect Size (Cram&eacute;r's V)</div>
+          <div class="stat-val" id="statCramerV">&mdash;</div>
+          <div class="stat-sub" id="statPearsonCSub">Contingency Coeff C = &mdash;</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Statistical Decision at &alpha;</div>
+          <div class="stat-val" id="statDecision">&mdash;</div>
+          <div class="stat-sub" id="statCochranSub">Cochran's Rule Check</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 3: PROGRAMMATIC CONTINGENCY TABLE & CONDITIONAL PROFILES
+         ===================================================================== -->
+
+    <section class="panel">
+      <div class="panel-title">
+        <span>Section 3 &mdash; Programmatically Constructed Contingency Table &amp; Marginal/Conditional Breakdown</span>
+        <span class="panel-subtitle">Observed O<sub>ij</sub>, Expected E<sub>ij</sub> = n<sub>i&bull;</sub>n<sub>&bull;j</sub>/N, Joint f<sub>ij</sub>, Conditional P(Y|X) &amp; P(X|Y), and Standardized Residuals</span>
+      </div>
+
+      <div id="contingencyTableWrapper" class="table-scroll" style="margin-bottom: 18px;"></div>
+
+      <div class="two-col">
+        <div>
+          <div class="panel-title" style="margin-bottom: 8px;">
+            <span>Row Conditional Distribution P(Y = y<sub>j</sub> | X = x<sub>i</sub>)</span>
+            <span class="panel-subtitle">Independent iff all rows match Marginal P(Y)</span>
+          </div>
+          <div id="rowCondTableWrapper" class="table-scroll"></div>
+        </div>
+
+        <div>
+          <div class="panel-title" style="margin-bottom: 8px;">
+            <span>Column Conditional Distribution P(X = x<sub>i</sub> | Y = y<sub>j</sub>)</span>
+            <span class="panel-subtitle">Independent iff all cols match Marginal P(X)</span>
+          </div>
+          <div id="colCondTableWrapper" class="table-scroll"></div>
+        </div>
+      </div>
+
+      <!-- Dynamic Interpretation Callout -->
+      <div id="dynamicInterpretationBox" class="callout" style="margin-top: 16px;"></div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 4: VISUAL DIAGNOSTICS (CONDITIONAL BARS & CHI-SQUARE DENSITY)
+         ===================================================================== -->
+
+    <section class="panel">
+      <div class="panel-title">
+        <span>Section 4 &mdash; Visual Diagnostics: Conditional Profiles, Pearson Residuals &amp; &chi;&sup2; Tail Area</span>
+        <span class="panel-subtitle">Left: Conditional P(Y | X = x<sub>i</sub>) vs. Marginal P(Y) &bull; Right: &chi;&sup2;<sub>df</sub> Density, Critical Threshold &amp; Standardized Residuals r<sub>ij</sub></span>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <div class="canvas-wrapper">
+            <canvas id="condProfileCanvas" width="540" height="340"></canvas>
+          </div>
+          <div class="legend-row">
+            <div class="legend-item"><span class="legend-swatch" style="background: #111111;"></span> Row Conditional Profiles P(Y = y<sub>j</sub> | X = x<sub>i</sub>)</div>
+            <div class="legend-item"><span class="legend-swatch" style="background: #0055FF;"></span> Dashed Reference: Marginal P(Y = y<sub>j</sub>) under Independence</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="canvas-wrapper">
+            <canvas id="chiDistCanvas" width="540" height="340"></canvas>
+          </div>
+          <div class="legend-row">
+            <div class="legend-item"><span class="legend-swatch" style="background: #111111;"></span> &chi;&sup2;<sub>df</sub> PDF Curve</div>
+            <div class="legend-item"><span class="legend-swatch" style="background: #888888;"></span> Rejection Region (&chi;&sup2; &ge; &chi;&sup2;<sub>1&minus;&alpha;</sub>)</div>
+            <div class="legend-item"><span class="legend-swatch" style="background: #0055FF;"></span> Observed &chi;&sup2;<sub>obs</sub> &amp; Cell Residuals r<sub>ij</sub></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 5: PROGRAMMATIC IMPLEMENTATION (CLEAN JAVASCRIPT)
+         ===================================================================== -->
+
+    <section class="panel prose">
+      <div class="panel-title">
+        <span>Section 5 &mdash; Reference Programmatic Implementation</span>
+        <span class="panel-subtitle">Single-Pass Cross-Tabulation, Expected Frequencies, &chi;&sup2; Statistic &amp; Exact Incomplete Gamma p-Value</span>
+      </div>
+
+      <pre><code>// 1. Construct contingency table, marginals, conditionals, E_ij, and Chi-square from any bivariate dataset (X, Y)
+function analyzeContingency(pairs) {
+  const rowSet = new Set(), colSet = new Set();
+  for (const [x, y, w = 1] of pairs) { rowSet.add(String(x)); colSet.add(String(y)); }
+  const rows = Array.from(rowSet), cols = Array.from(colSet);
+  const R = rows.length, C = cols.length;
+  const rIdx = Object.fromEntries(rows.map((r, i) => [r, i]));
+  const cIdx = Object.fromEntries(cols.map((c, j) => [c, j]));
+
+  // Observed frequency matrix O_ij and marginal totals n_{i.}, n_{.j}, N
+  const O = Array.from({ length: R }, () => new Float64Array(C));
+  const rowTotals = new Float64Array(R), colTotals = new Float64Array(C);
+  let N = 0;
+  for (const [x, y, w = 1] of pairs) {
+    const i = rIdx[String(x)], j = cIdx[String(y)];
+    O[i][j] += w; rowTotals[i] += w; colTotals[j] += w; N += w;
+  }
+
+  // Marginal relative frequencies: f_{i.} = n_{i.}/N, f_{.j} = n_{.j}/N
+  const rowMarginals = rowTotals.map(r => r / N);
+  const colMarginals = colTotals.map(c => c / N);
+
+  // Expected frequencies under independence E_ij = (n_{i.} * n_{.j}) / N, conditional frequencies, and Chi-square
+  let chi2 = 0, g2 = 0;
+  const E = Array.from({ length: R }, () => new Float64Array(C));
+  const jointRel = Array.from({ length: R }, () => new Float64Array(C));
+  const condGivenRow = Array.from({ length: R }, () => new Float64Array(C)); // P(Y = y_j | X = x_i)
+  const condGivenCol = Array.from({ length: R }, () => new Float64Array(C)); // P(X = x_i | Y = y_j)
+
+  for (let i = 0; i &lt; R; i++) {
+    for (let j = 0; j &lt; C; j++) {
+      E[i][j] = (rowTotals[i] * colTotals[j]) / N;
+      jointRel[i][j] = O[i][j] / N;
+      condGivenRow[i][j] = rowTotals[i] &gt; 0 ? O[i][j] / rowTotals[i] : 0;
+      condGivenCol[i][j] = colTotals[j] &gt; 0 ? O[i][j] / colTotals[j] : 0;
+      if (E[i][j] &gt; 0) {
+        const diff = O[i][j] - E[i][j];
+        chi2 += (diff * diff) / E[i][j];
+        if (O[i][j] &gt; 0) g2 += 2 * O[i][j] * Math.log(O[i][j] / E[i][j]);
+      }
+    }
+  }
+
+  const df = (R - 1) * (C - 1);
+  const pValue = df &gt; 0 ? regularizedGammaQ(df / 2, chi2 / 2) : 1.0; // Upper-tail P(Chi2_df &gt;= chi2)
+  return { rows, cols, N, O, E, rowTotals, colTotals, rowMarginals, colMarginals, jointRel, condGivenRow, condGivenCol, chi2, g2, df, pValue };
+}</code></pre>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 6: DISCUSSION — STATISTICAL ASSOCIATION VS. CAUSALITY
+         ===================================================================== -->
+
+    <section class="panel prose">
+      <div class="panel-title">
+        <span>Section 6 &mdash; Discussion: Interpreting Independence Tests &amp; Distinguishing Association from Causality</span>
+        <span class="panel-subtitle">Symmetry of &chi;&sup2;, Structural vs. Sampling Zeros, Confounding, and Pearl's Ladder of Causation</span>
+      </div>
+
+      <p>
+        <strong>1. Interpreting the Statistical Decision (Rejecting vs. Failing to Reject H<sub>0</sub>):</strong>
+        A small <em>p</em>-value (<em>p</em> &lt; &alpha;, equivalently &chi;&sup2;<sub>obs</sub> &gt; &chi;&sup2;<sub>1&minus;&alpha;, <em>df</em></sub>) indicates that the observed deviations (<em>O<sub>ij</sub></em> &minus; <em>E<sub>ij</sub></em>) are too large to be plausibly explained by random sampling variation alone under <em>H</em><sub>0</sub> : <em>X</em> &perp;&perp; <em>Y</em>; we therefore conclude that <em>X</em> and <em>Y</em> are <strong>statistically dependent (associated)</strong>. Conversely, when <em>p</em> &ge; &alpha;, we fail to reject <em>H</em><sub>0</sub>: the empirical conditional distributions <em>P&#770;</em>(<em>Y</em> | <em>X</em> = <em>x<sub>i</sub></em>) are statistically indistinguishable from the marginal distribution <em>P&#770;</em>(<em>Y</em>), which is consistent with independence (though in small samples one must also verify statistical power via Cram&eacute;r's <em>V</em>).
+      </p>
+
+      <p>
+        <strong>2. Why Statistical Dependence Does Not Imply Causality:</strong>
+        The Pearson &chi;&sup2; statistic is <em>algebraically symmetric</em> in <em>X</em> and <em>Y</em>: transposing the contingency table leaves <em>O<sub>ij</sub></em>, <em>E<sub>ij</sub></em>, <em>df</em>, and &chi;&sup2; completely unchanged. Consequently, a contingency table alone can only measure <strong>observational association</strong> &Popf;(<em>Y</em> | <em>X</em> = <em>x</em>) &ne; &Popf;(<em>Y</em>), whereas a <strong>causal effect</strong> concerns an active intervention <em>do</em>(<em>X</em> := <em>x</em>) in Judea Pearl's structural causal framework:
+      </p>
+      <div class="formula-box">Statistical Association:   &Popf;(Y = y | X = x) &ne; &Popf;(Y = y)        (Seeing / Conditioning on X)
+Causal Effect (Intervention): &Popf;(Y = y | do(X := x)) &ne; &Popf;(Y = y)   (Doing / Manipulating X)</div>
+
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Structural Mechanism</th>
+              <th>DAG Representation</th>
+              <th>Observational Test (X &perp;&perp; Y?)</th>
+              <th>Causal Effect X &rarr; Y?</th>
+              <th>Concrete Illustration</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Direct / Indirect Causation</strong></td>
+              <td><code>X &rarr; Y</code> or <code>X &rarr; M &rarr; Y</code></td>
+              <td>Dependent (&chi;&sup2; large, <em>p</em> &ll; &alpha;)</td>
+              <td><strong>Yes</strong> (&Popf;(<em>Y</em> | <em>do</em>(<em>X</em>)) varies)</td>
+              <td>Enforcing Hardware FIDO2 MFA (<em>X</em>) directly blocks credential-stuffing intrusions (<em>Y</em>).</td>
+            </tr>
+            <tr>
+              <td><strong>Reverse Causation</strong></td>
+              <td><code>X &larr; Y</code></td>
+              <td>Dependent (&chi;&sup2; identical to <em>X</em> &rarr; <em>Y</em>)</td>
+              <td><strong>No</strong> (<em>Y</em> causes <em>X</em>)</td>
+              <td>Emergency incident response deployment (<em>X</em>) is triggered by a detected breach (<em>Y</em>).</td>
+            </tr>
+            <tr>
+              <td><strong>Common Cause (Confounding)</strong></td>
+              <td><code>X &larr; Z &rarr; Y</code></td>
+              <td>Marginally Dependent (<em>X</em> &not;&perp;&perp; <em>Y</em>), but <em>X</em> &perp;&perp; <em>Y</em> | <em>Z</em></td>
+              <td><strong>No</strong> (Spurious association)</td>
+              <td>Summer temperature (<em>Z</em>) drives both Ice Cream Sales (<em>X</em>) and Swimming/Drowning (<em>Y</em>).</td>
+            </tr>
+            <tr>
+              <td><strong>Collider Bias (Selection)</strong></td>
+              <td><code>X &rarr; S &larr; Y</code> (conditioned on <em>S</em> = 1)</td>
+              <td>Conditionally Dependent given <em>S</em> = 1, even if <em>X</em> &perp;&perp; <em>Y</em></td>
+              <td><strong>No</strong> (Berkson's paradox)</td>
+              <td>Among reported high-profile incidents (<em>S</em> = 1), exploit sophistication (<em>X</em>) and target value (<em>Y</em>) appear negatively correlated.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <strong>Summary Takeaway (Simpson's Paradox &amp; Causal Identification):</strong>
+        Even a highly significant &chi;&sup2; test (<em>p</em> &lt; 10<sup>&minus;12</sup>) and a large Cram&eacute;r's <em>V</em> only establish that knowing <em>X</em> improves our statistical prediction of <em>Y</em> in the observed population. Establishing that <em>X</em> <strong>causes</strong> <em>Y</em> requires either (i) a <strong>Randomized Controlled Trial (RCT)</strong> where random assignment severs all incoming confounding arrows into <em>X</em> so that &Popf;(<em>Y</em> | <em>do</em>(<em>X</em> = <em>x</em>)) = &Popf;(<em>Y</em> | <em>X</em> = <em>x</em>), or (ii)measuring and stratifying on a sufficient back-door adjustment set <em>Z</em> (via the Mantel&ndash;Haenszel test or log-linear models) to eliminate confounding and guard against <em>Simpson's paradox</em>.
+      </div>
+    </section>
+
+    <footer>
+      Statistics Homework 6 &mdash; Programmatic Contingency Table, Chi-Square Independence Test &amp; Causal Discussion
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
